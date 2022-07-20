@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import geoCamPlannerUI
 import wx
@@ -244,7 +244,7 @@ class GeoCamPlanner(geoCamPlannerUI.geoCamPlannerBase):
                 geomtry_legend_labels.append('always visible (min zoom)')
                 geomtry_legend_labels.append('sometimes visible (min zoom)')
                 
-
+            max_y = None
             for z in zooms:
                 
                 hfovx = math.atan2(self.currentConfig.values['ix']/2.0,self.currentConfig.values['fx']*z)
@@ -314,6 +314,10 @@ class GeoCamPlanner(geoCamPlannerUI.geoCamPlannerBase):
                         rm = rn+((rf-rn)/2.0)
                         x.append(rm*pan_factor)
                         y.append(rf-rn)
+                        if max_y is None:
+                            max_y = y[-1]
+                        else:
+                            max_y = max(max_y, y[-1])
                         if y[-1] > self.currentConfig.values['resolution']:
                             ok.append(False)
                         else:
@@ -358,7 +362,7 @@ class GeoCamPlanner(geoCamPlannerUI.geoCamPlannerBase):
                     else:
                         fc = (self.currentConfig.values['range'],self.currentConfig.values['height']+self.currentConfig.values['range']*math.tan(end_angle+rr))
 
-                    print ep,nc,fc
+                    print (ep,nc,fc)
                     polygon = matplotlib.patches.Polygon((ep,nc,fc), True)
                     patches.append(polygon)
 
@@ -395,14 +399,14 @@ class GeoCamPlanner(geoCamPlannerUI.geoCamPlannerBase):
                 geometry_axes.plot([0,self.currentConfig.values['range']],[0.0,0.0],color=(0.0,0.0,1.0,1.0))
 
 
-            x = [0,self.currentConfig.values['range']]
+            x = [0, self.currentConfig.values['range']]
             y = [self.currentConfig.values['resolution'],self.currentConfig.values['resolution']]
             legend_axes.append(footprint_axes.plot(x,y,'b'))
             
             footprint_legend_labels.append('target resolution')
             geomtry_legend_labels.append('waterline')
 
-            footprint_axes.set_ylim((0,self.currentConfig.values['resolution']*10.0))
+            footprint_axes.set_ylim((0,max_y*2.0))
             footprint_axes.set_xlim((0,self.currentConfig.values['range']))
             footprint_axes.set_xlabel('range (m)')
             footprint_axes.set_ylabel('pixel footprint (m)')
@@ -412,7 +416,8 @@ class GeoCamPlanner(geoCamPlannerUI.geoCamPlannerBase):
             geometry_axes.set_aspect('equal')
             #geometry_axes.set_ylim((0,max(self.currentConfig.values['height']*2.0,self.currentConfig.values['range']*.2)))
 
-            top_axes.set_xlim((0,self.currentConfig.values['range']))
+            top_axes.set_xlim((-self.currentConfig.values['range'],self.currentConfig.values['range']))
+            top_axes.set_ylim((-self.currentConfig.values['range'],self.currentConfig.values['range']))
             top_axes.set_aspect('equal')
             top_axes.set_xlabel('across track range (m)')
             top_axes.set_ylabel('along track range (m)')
@@ -651,13 +656,13 @@ class GeoCamPlanner(geoCamPlannerUI.geoCamPlannerBase):
             self.save(self.filename)
 
     def OnFileSaveAs(self, evt):
-        d = wx.FileDialog(self,wildcard='*.xml',style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
+        d = wx.FileDialog(self,wildcard='*.xml',style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
         ret = d.ShowModal()
         if ret == wx.ID_OK:
             self.save(str(d.GetPath()))
 
     def OnSaveGraph(self, evt):
-        d = wx.FileDialog(self,wildcard='*.png',style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
+        d = wx.FileDialog(self,wildcard='*.png',style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
         ret = d.ShowModal()
         if ret == wx.ID_OK:
             self.plots.get_figure().savefig(str(d.GetPath()))
@@ -702,8 +707,7 @@ class GeoCamPlanner(geoCamPlannerUI.geoCamPlannerBase):
         evt.Skip()
 
 if __name__ == "__main__":
-    app = wx.PySimpleApp(0)
-    wx.InitAllImageHandlers()
+    app = wx.App()
     fname = None
     if len(sys.argv) == 2:
         fname = sys.argv[1]
